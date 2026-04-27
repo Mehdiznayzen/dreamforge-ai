@@ -5,8 +5,11 @@ import { Button } from './ui/button';
 import Link from 'next/link';
 import { NavbarLinks } from '@/lib/utils';
 import Image from 'next/image';
+import { useUser } from '@clerk/nextjs';
 
 const Navbar = () => {
+    const { isSignedIn, isLoaded } = useUser()
+
     return (
         <motion.nav
             initial={{ y: -100 }}
@@ -38,16 +41,26 @@ const Navbar = () => {
                     }
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <Button
-                        className="hidden sm:inline-flex border-white/20 text-white hover:bg-white/10 transition-all duration-300 cursor-pointer w-20 md:w-32 h-10"
-                    >
-                        Login
-                    </Button>
-                    <Button className="relative cursor-pointer overflow-hidden bg-linear-to-r from-purple-600 to-blue-600 text-white w-20 md:w-32 h-10 hover:shadow-[0_0_30px_rgba(147,51,234,0.5)] transition-all duration-300">
-                        <span className="relative z-10">Sign Up</span>
-                    </Button>
-                </div>
+                {
+                    !isSignedIn ? (
+                        <div className="flex items-center gap-4">
+                            <Button
+                                className="hidden sm:inline-flex border-white/20 text-white hover:bg-white/10 transition-all duration-300 cursor-pointer w-20 md:w-32 h-10"
+                            >
+                                Login
+                            </Button>
+                            <Button className="relative cursor-pointer overflow-hidden bg-linear-to-r from-purple-600 to-blue-600 text-white w-20 md:w-32 h-10 hover:shadow-[0_0_30px_rgba(147,51,234,0.5)] transition-all duration-300">
+                                <span className="relative z-10">Sign Up</span>
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-4">
+                            <Button className="relative cursor-pointer overflow-hidden bg-linear-to-r from-purple-600 to-blue-600 text-white w-20 md:w-32 h-10 hover:shadow-[0_0_30px_rgba(147,51,234,0.5)] transition-all duration-300">
+                                <span className="relative z-10">Get Started</span>
+                            </Button>
+                        </div>
+                    )
+                }
             </div>
         </motion.nav>
     );
