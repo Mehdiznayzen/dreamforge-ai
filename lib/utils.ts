@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 export const NavbarLinks = [
   {
     id: 1,
-    href: "#home",
+    href: "/",
     label: "Home",
   },
   {

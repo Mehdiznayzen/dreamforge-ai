@@ -1,18 +1,115 @@
 "use client";
 
+import CustomInputOTP from "@/components/CustomInputOTP";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSignUp } from "@clerk/nextjs";
 import { motion } from "framer-motion"
 import { ArrowRight, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChangeEvent, useState } from "react";
 import { FaGoogle } from "react-icons/fa";
-import { FaGithub } from "react-icons/fa6";
+import { toast } from "sonner";
+import { OAuthStrategy } from '@clerk/shared/types'
+
 
 const SignupPage = () => {
+  const { signUp } = useSignUp();
+  const [showInputOTP, setShowInputOTP] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleResendCode = async () => {
+    try {
+      await signUp.verifications.sendEmailCode();
+      toast.success("Code resent successfully");
+    } catch (err: any) {
+      toast.error(err?.errors?.[0]?.message || "Failed to resend code");
+    }
+  }
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  }
+
+  const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await signUp.create({
+        emailAddress: formData.email,
+        password: formData.password,
+      });
+
+      await signUp.verifications.sendEmailCode();
+
+      setShowInputOTP(true);
+      toast.success("Verification code sent to email");
+    } catch (err: any) {
+      console.log(err);
+      toast.error(err.errors?.[0]?.message || "Signup failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerify = async (code: string) => {
+    try {
+      const result = await signUp.verifications.verifyEmailCode({
+        code,
+      });
+
+      if (signUp.status === "complete") {
+        await signUp.finalize();
+        toast.success("Account created successfully");
+        setShowInputOTP(false);
+        router.push("/");
+      } else {
+        toast.error("Invalid code");
+      }
+    } catch (err) {
+      console.log(err);
+      toast.error("Verification failed");
+    }
+  };
+
+  const handleGoogleSignUp = async (strategy: OAuthStrategy) => {
+    try {
+      const { error } = await signUp.sso({
+        strategy,
+        redirectCallbackUrl: '/sso-callback',
+        redirectUrl: '/',
+      });
+      if (error) {
+        console.error(JSON.stringify(error, null, 2))
+        return
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Google sign in failed");
+    }
+  }
 
   return (
     <>
@@ -29,11 +126,12 @@ const SignupPage = () => {
         </p>
       </motion.div>
 
-      <motion.div
+      <motion.form
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className="space-y-4"
+        onSubmit={handleCreateUser}
       >
         <div className="space-y-2">
           <Label htmlFor="register-username" className="text-gray-300">Username</Label>
@@ -42,6 +140,9 @@ const SignupPage = () => {
             <Input
               id="register-username"
               type="text"
+              value={formData.username}
+              onChange={handleChange}
+              name="username"
               placeholder="John Doe"
               className="pl-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
             />
@@ -55,6 +156,9 @@ const SignupPage = () => {
             <Input
               id="register-email"
               type="email"
+              value={formData.email}
+              onChange={handleChange}
+              name="email"
               placeholder="john@doe.com"
               className="pl-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
             />
@@ -68,6 +172,9 @@ const SignupPage = () => {
             <Input
               id="register-password"
               type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={handleChange}
+              name="password"
               placeholder="••••••••"
               className="pl-12 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
             />
@@ -88,6 +195,9 @@ const SignupPage = () => {
             <Input
               id="confirm-password"
               type={showConfirmPassword ? 'text' : 'password'}
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              name="confirmPassword"
               placeholder="••••••••"
               className="pl-12 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
             />
@@ -101,11 +211,26 @@ const SignupPage = () => {
           </div>
         </div>
 
-        <Button className="cursor-pointer w-full h-12 bg-linear-to-r from-purple-600 to-blue-600 text-white hover:shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 rounded-xl mt-6">
-          Create Account
-          <ArrowRight className="w-5 h-5 ml-2" />
+        <div id="clerk-captcha"></div>
+
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="cursor-pointer w-full h-12 bg-linear-to-r from-purple-600 to-blue-600 text-white hover:shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 rounded-xl mt-6 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Creating Account...
+            </div>
+          ) : (
+            <>
+              Create Account
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </>
+          )}
         </Button>
-      </motion.div>
+      </motion.form>
 
       <div className="relative my-10 flex items-center">
         <div className="flex-1 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
@@ -133,9 +258,10 @@ const SignupPage = () => {
         <Button
           variant="outline"
           className="cursor-pointer h-12 border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20 transition-all rounded-xl"
+          onClick={() => handleGoogleSignUp('oauth_google')}
         >
           <FaGoogle className="w-5 h-5 mr-2" />
-          Google
+          Sign up with Google
         </Button>
       </motion.div>
 
@@ -149,6 +275,17 @@ const SignupPage = () => {
           Privacy Policy
         </Link>
       </p>
+
+      {
+        showInputOTP && (
+          <CustomInputOTP
+            open={showInputOTP}
+            onClose={() => setShowInputOTP(false)}
+            onSubmit={handleVerify}
+            onResend={handleResendCode}
+          />
+        )
+      }
     </>
   )
 }
