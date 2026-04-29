@@ -98,14 +98,14 @@ const SigninPage = () => {
         redirectUrl: '/',
       })
       if (error) {
-        console.error(JSON.stringify(error, null, 2))
+        toast.error(error.message)
         return
       }
 
       if (signIn.status === 'needs_second_factor') {
       } else if (signIn.status === 'needs_client_trust') {
       } else {
-        console.error('Sign-in attempt not complete:', signIn)
+        console.log('Sign-in attempt not complete .')
       }
     } catch (error) {
       console.log(error);

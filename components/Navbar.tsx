@@ -8,11 +8,14 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import ConfirmSignOutModal from './ConfirmSignOutModal';
 
 const Navbar = () => {
     const { isSignedIn, isLoaded } = useUser();
     const { signOut } = useClerk()
     const router = useRouter();
+    const [showModalConformation, setModalConformation] = useState<boolean>(false);
 
     return (
         <motion.nav
@@ -66,11 +69,21 @@ const Navbar = () => {
                             </Button>
                             <Button
                                 className={"cursor-pointer w-20 md:w-32 h-10 transition-all duration-300"}
-                                onClick={() => signOut({ redirectUrl: "/sign-in"})}
+                                onClick={() => setModalConformation(true)}
                             >
                                 <span className="relative z-10">Sign Out</span>
                             </Button>
                         </div>
+                    )
+                }
+
+                {
+                    showModalConformation && (
+                        <ConfirmSignOutModal 
+                            open={showModalConformation}
+                            onClose={() => setModalConformation(false)}
+                            onConfirm={() => signOut({ redirectUrl: "/sign-in"})}
+                        />
                     )
                 }
             </div>

@@ -13,12 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
-
-interface CustomModalInputProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (email: string) => Promise<void>;
-}
+import { CustomModalInputProps } from "@/types";
 
 const CustomModalInput = ({ open, onClose, onSubmit }: CustomModalInputProps) => {
   const [email, setEmail] = useState("");

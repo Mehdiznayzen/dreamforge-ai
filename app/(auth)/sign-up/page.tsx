@@ -13,6 +13,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { FaGoogle } from "react-icons/fa";
 import { toast } from "sonner";
 import { OAuthStrategy } from '@clerk/shared/types'
+import { createUser } from "@/lib/actions/users.actions";
 
 
 const SignupPage = () => {
@@ -83,12 +84,20 @@ const SignupPage = () => {
 
   const handleVerify = async (code: string) => {
     try {
-      const result = await signUp.verifications.verifyEmailCode({
-        code,
-      });
-
       if (signUp.status === "complete") {
         await signUp.finalize();
+
+        const userId = signUp.id;
+        if (!userId) {
+          throw new Error("User ID is undefined");
+        }
+
+        await createUser({
+          clerkId: userId,
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        })
         toast.success("Account created successfully");
         setShowInputOTP(false);
         router.push("/");
@@ -107,6 +116,18 @@ const SignupPage = () => {
         strategy,
         redirectCallbackUrl: '/sso-callback',
         redirectUrl: '/',
+      });
+
+      const userId = signUp.id;
+      if (!userId) {
+        throw new Error("User ID is undefined");
+      }
+
+      await createUser({
+        clerkId: userId,
+        username: signUp.emailAddress ?? "user_" + userId,
+        email: signUp.emailAddress ?? "",
+        password: "",
       });
       if (error) {
         console.error(JSON.stringify(error, null, 2))

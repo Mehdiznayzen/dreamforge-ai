@@ -13,12 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
-
-interface CustomNewPasswordModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (password: string) => Promise<void>;
-}
+import { CustomNewPasswordModalProps } from "@/types";
 
 const CustomNewPasswordModal = ({ open, onClose, onSubmit }: CustomNewPasswordModalProps) => {
   const [password, setPassword] = useState("");

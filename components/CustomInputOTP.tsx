@@ -12,13 +12,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-
-interface CustomInputOTPProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (code: string) => void;
-  onResend : () => Promise<void>;
-}
+import { CustomInputOTPProps } from "@/types";
 
 const CustomInputOTP = ({ open, onClose, onSubmit, onResend }: CustomInputOTPProps) => {
   const [value, setValue] = useState("");
