@@ -6,22 +6,34 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FaGoogle} from "react-icons/fa";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { useSignIn } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
+import { useSignIn, useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { OAuthStrategy } from '@clerk/shared/types'
 import { useRouter } from "next/navigation";
+import CustomModalInput from "@/components/CustomModalInput";
+import CustomInputOTP from "@/components/CustomInputOTP";
+import CustomNewPasswordModal from "@/components/CustomNewPasswordModal";
 
 const SigninPage = () => {
+  const { isSignedIn } = useUser();
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showInputOTP, setShowInputOTP] = useState(false);
-  const { errors, fetchStatus, signIn } = useSignIn();
+  const { fetchStatus, signIn } = useSignIn();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const router = useRouter();
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [showModalResetPassword, setShowModalResetPasswrod] = useState<boolean>(false);
+
+  useEffect(() => {
+    if(isSignedIn) {
+      router.push('/');
+    }
+  }, [isSignedIn]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -101,6 +113,84 @@ const SigninPage = () => {
     }
   }
 
+  const handleSendCodeVarification = async (email: string) => {
+    try {
+      if (!signIn) return;
+      const { error: createError } = await signIn.create({
+        identifier: email,
+      });
+
+      if (createError) {
+        toast.error(createError.message);
+        return;
+      }
+
+      const { error: sendError } = await signIn.resetPasswordEmailCode.sendCode();
+      if (sendError) {
+        toast.error(sendError.message);
+        return;
+      }
+
+      toast.success("Code sent to your email 📩");
+      setShowModal(false);
+      setShowInputOTP(true);
+
+    } catch (err: any) {
+      toast.error(err?.errors?.[0]?.message || "Failed to send code");
+    }
+  };
+
+  const handleVerify = async (code: string) => {
+    try {
+      const { error } = await signIn.resetPasswordEmailCode.verifyCode({
+        code,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success("Code verified ✅");
+      setShowInputOTP(false);
+      setShowModalResetPasswrod(true)
+    } catch (err) {
+      toast.error("Verification failed");
+    }
+  };
+
+  const handleResendCode = async () => {
+    try {
+      await signIn.resetPasswordEmailCode.sendCode();
+      toast.success("Code resent successfully");
+    } catch (err: any) {
+      toast.error(err?.errors?.[0]?.message || "Failed to resend code");
+    }
+  };
+  
+  const handleResetPassword = async (password: string) => {
+    try {
+      const { error } = await signIn.resetPasswordEmailCode.submitPassword({
+        password
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        await signIn.finalize();
+        toast.success("Password updated successfully 🎉");
+        setShowModalResetPasswrod(false);
+        router.push("/");
+      }
+
+    } catch (err) {
+      toast.error("Failed to update password");
+    }
+  }
+
   return (
     <>
       <motion.div
@@ -164,9 +254,14 @@ const SigninPage = () => {
 
         {/* Forgot Password */}
         <div className="flex justify-end">
-          <a href="#" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+          <Button
+            type="button"
+            variant={"link"}
+            onClick={() => setShowModal(true)}
+            className="text-sm text-purple-400 cursor-pointer hover:no-underline transition-colors"
+          >
             Forgot password?
-          </a>
+          </Button>
         </div>
 
         <Button
@@ -225,6 +320,37 @@ const SigninPage = () => {
           Sign In with Google
         </Button>
       </motion.div>
+
+      {
+        showModal && (
+          <CustomModalInput 
+            open={showModal}
+            onClose={() => setShowModal(false)}
+            onSubmit={handleSendCodeVarification}
+          />
+        )
+      }
+
+      {
+        showInputOTP && (
+          <CustomInputOTP 
+            open={showInputOTP}
+            onClose={() => setShowInputOTP(false)}
+            onSubmit={handleVerify}
+            onResend={handleResendCode}
+          />
+        )
+      }
+
+      {
+        showModalResetPassword && (
+          <CustomNewPasswordModal 
+            open={showModalResetPassword}
+            onClose={() => setShowModalResetPasswrod(false)}
+            onSubmit={handleResetPassword}
+          />
+        )
+      }
     </>
     
   )

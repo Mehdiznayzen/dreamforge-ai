@@ -91,7 +91,7 @@ const CustomInputOTP = ({ open, onClose, onSubmit, onResend }: CustomInputOTPPro
 
         <Button
           disabled={!isComplete}
-          className="w-full h-12 bg-linear-to-r from-purple-600 to-blue-600 hover:shadow-lg hover:shadow-purple-500/30 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          className="cursor-pointer w-full h-12 bg-linear-to-r from-purple-600 to-blue-600 hover:shadow-lg hover:shadow-purple-500/30 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={() => onSubmit(value)}
         >
           Verify Code
@@ -102,7 +102,7 @@ const CustomInputOTP = ({ open, onClose, onSubmit, onResend }: CustomInputOTPPro
           <button
             onClick={handleResend}
             disabled={timer > 0 || isResending}
-            className="text-purple-400 hover:underline disabled:text-gray-500 disabled:cursor-not-allowed"
+            className="text-purple-400 cursor-pointer hover:underline disabled:text-gray-500 disabled:cursor-not-allowed"
           >
             {
               isResending

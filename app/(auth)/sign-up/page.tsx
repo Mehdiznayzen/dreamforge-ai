@@ -4,12 +4,12 @@ import CustomInputOTP from "@/components/CustomInputOTP";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSignUp } from "@clerk/nextjs";
+import { useSignUp, useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion"
 import { ArrowRight, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { FaGoogle } from "react-icons/fa";
 import { toast } from "sonner";
 import { OAuthStrategy } from '@clerk/shared/types'
@@ -17,6 +17,7 @@ import { OAuthStrategy } from '@clerk/shared/types'
 
 const SignupPage = () => {
   const { signUp } = useSignUp();
+  const { isSignedIn } = useUser();
   const [showInputOTP, setShowInputOTP] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -28,6 +29,12 @@ const SignupPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if(isSignedIn) {
+      router.push('/');
+    }
+  }, [isSignedIn]);
 
   const handleResendCode = async () => {
     try {
