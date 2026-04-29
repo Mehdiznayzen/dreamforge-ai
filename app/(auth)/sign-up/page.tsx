@@ -84,6 +84,10 @@ const SignupPage = () => {
 
   const handleVerify = async (code: string) => {
     try {
+      await signUp.verifications.verifyEmailCode({
+        code,
+      });
+
       if (signUp.status === "complete") {
         await signUp.finalize();
 
