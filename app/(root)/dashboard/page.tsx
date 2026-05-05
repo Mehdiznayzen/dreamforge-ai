@@ -1,14 +1,14 @@
 "use client";
 
-import { ImageGallery } from '@/components/dashboard/ImageGallery';
 import PromptInput from '@/components/dashboard/PromptInput';
 import { GeneratedImage } from '@/types';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { createImage, getUserImages } from '@/lib/actions/images.actions';
+import { createImage, getUserImages, toggleLikeImage } from '@/lib/actions/images.actions';
 import { useUser } from '@clerk/nextjs';
 import ImageGridLoader from '@/components/dashboard/ImageGridLoader';
 import { uploadImageToStorage } from '@/lib/supabase/client';
+import ImageGallery from '@/components/dashboard/ImageGallery';
 
 const DashboardPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -94,16 +94,49 @@ const DashboardPage = () => {
       setIsGenerating(false);
     }
   };
-  const handleLike = (id: string) => {
-    setImages((prev) =>
-      prev.map((img) => (img.id === id ? { ...img, liked: !img.liked } : img))
-    );
+  
+  const handleLike = async (id: string) => {
+    try {
+      const image = images.find((img) => img.id === id);
+      if (!image) return;
+
+      const newLiked = !image.liked;
+
+      await toggleLikeImage(id, newLiked);
+
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, liked: newLiked } : img
+        )
+      );
+    } catch (error) {
+      toast.error("Failed to update favorite");
+    }
   };
 
-  const handleDownload = (id: string) => {
-    const image = images.find((img) => img.id === id);
-    if (image) {
-      toast.success('Download started!');
+  const handleDownload = async (id: string) => {
+    try {
+      const image = images.find((img) => img.id === id);
+      if (!image) return;
+
+      const response = await fetch(image.url);
+      const blob = await response.blob();
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = `dreamforge-${id}.png`;
+      document.body.appendChild(a);
+      a.click();
+
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Download completed!");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download image");
     }
   };
 

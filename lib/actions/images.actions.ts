@@ -59,3 +59,17 @@ export const getUserImages = async (clerkId: string) => {
     throw error;
   }
 };
+
+export const toggleLikeImage = async (imageId: string, liked: boolean) => {
+  try {
+    await db
+      .update(images)
+      .set({ liked })
+      .where(eq(images.id, imageId));
+
+    revalidatePath("/dashboard");
+  } catch (error) {
+    console.error("TOGGLE LIKE ERROR:", error);
+    throw error;
+  }
+};

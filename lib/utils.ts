@@ -65,7 +65,6 @@ export const features = [
 
 export const navItems = [
   { id: 'generate', label: 'Generate Image', icon: Sparkles, href: "/dashboard" },
-  { id: 'history', label: 'History', icon: History, href: "/dashboard/history" },
   { id: 'favorites', label: 'Favorites', icon: Heart, href: "/dashboard/favorites" },
   { id: 'settings', label: 'Settings', icon: Settings, href: "/dashboard/settings" },
 ];
