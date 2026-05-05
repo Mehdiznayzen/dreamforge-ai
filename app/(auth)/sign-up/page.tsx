@@ -33,7 +33,7 @@ const SignupPage = () => {
 
   useEffect(() => {
     if(isSignedIn) {
-      router.push('/');
+      router.push('/dashboard');
     }
   }, [isSignedIn]);
 
@@ -91,20 +91,22 @@ const SignupPage = () => {
       if (signUp.status === "complete") {
         await signUp.finalize();
 
-        const userId = signUp.id;
-        if (!userId) {
-          throw new Error("User ID is undefined");
+        const clerkUserId = signUp.createdUserId;
+
+        if (!clerkUserId) {
+          throw new Error("Clerk user ID is undefined");
         }
 
         await createUser({
-          clerkId: userId,
+          clerkId: clerkUserId,
           username: formData.username,
           email: formData.email,
           password: formData.password,
-        })
+        });
+
         toast.success("Account created successfully");
         setShowInputOTP(false);
-        router.push("/");
+        router.push("/dashboard");
       } else {
         toast.error("Invalid code");
       }

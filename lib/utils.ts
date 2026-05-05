@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { Zap, Palette, Download, Sparkles, Layers, Shield } from 'lucide-react';
-
+import { Zap, Palette, Download, Sparkles, Layers, Shield, History, Heart, Settings } from 'lucide-react';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -63,3 +62,19 @@ export const features = [
     gradient: 'from-indigo-400 to-blue-500',
   },
 ];
+
+export const navItems = [
+  { id: 'generate', label: 'Generate Image', icon: Sparkles, href: "/dashboard" },
+  { id: 'history', label: 'History', icon: History, href: "/dashboard/history" },
+  { id: 'favorites', label: 'Favorites', icon: Heart, href: "/dashboard/favorites" },
+  { id: 'settings', label: 'Settings', icon: Settings, href: "/dashboard/settings" },
+];
+
+export async function urlToFile(url: string) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+
+  return new File([blob], `image-${Date.now()}.png`, {
+    type: "image/png",
+  });
+}

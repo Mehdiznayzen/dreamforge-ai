@@ -31,7 +31,7 @@ const SigninPage = () => {
 
   useEffect(() => {
     if(isSignedIn) {
-      router.push('/');
+      router.push('/dashboard');
     }
   }, [isSignedIn]);
 
@@ -65,9 +65,7 @@ const SigninPage = () => {
             if (session?.currentTask) return;
 
             const url = decorateUrl('/');
-            url.startsWith('http')
-              ? (window.location.href = url)
-              : router.push(url);
+            url.startsWith('http') ? (window.location.href = url) : router.push(url);
           },
         });
 

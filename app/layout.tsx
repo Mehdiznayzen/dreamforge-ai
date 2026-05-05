@@ -29,9 +29,10 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${jakarta.variable} ${mono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans bg-black text-white">
-        <ClerkProvider>
+        <ClerkProvider afterSignOutUrl={"/"}>
           {children}
           <Toaster />
         </ClerkProvider>

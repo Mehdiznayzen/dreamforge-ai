@@ -5,8 +5,35 @@ import { Sparkles, ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ImageWithFallback } from '@/public/figma/ImageWithFallback';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useState } from 'react';
 
 const HeroSection = () => {
+  const { isSignedIn } = useUser();
+  const router = useRouter();
+  const [valueInput, setValueInput] = useState<string>("");
+
+  const onGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (valueInput.trim().length === 0) {
+      toast.error("Start by describing your image idea to generate stunning visuals.");
+      return;
+    }
+
+    try {
+      if (!isSignedIn) {
+        toast.error("Please sign in or create an account to generate images.");
+        router.push("/sign-in");
+        return;
+      }
+      // Handle generate in dashboard page
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       <div className="absolute inset-0 bg-black">
@@ -63,18 +90,23 @@ const HeroSection = () => {
             Create professional-grade artwork in seconds, no design skills required.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4">
+          <form className="flex flex-col sm:flex-row gap-4" onSubmit={onGenerate}>
             <div className="flex-1 relative">
               <Input
                 placeholder="Describe your dream image..."
                 className="w-full bg-white/5 border-white/10 text-white placeholder:text-gray-500 h-14 px-6 rounded-xl backdrop-blur-sm focus:ring-2 focus:ring-purple-500/50"
+                value={valueInput}
+                onChange={(e) => setValueInput(e.target.value)}
               />
             </div>
-            <Button className="h-14 cursor-pointer px-8 bg-linear-to-r from-purple-600 to-blue-600 text-white hover:shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 rounded-xl">
+            <Button 
+              className="h-14 cursor-pointer px-8 bg-linear-to-r from-purple-600 to-blue-600 text-white hover:shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 rounded-xl"
+              type='submit'
+            >
               Generate Image
               <Sparkles className="w-5 h-5 ml-2" />
             </Button>
-          </div>
+          </form>
 
           <div className="flex items-center gap-6">
             <Button

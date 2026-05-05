@@ -1,149 +1,193 @@
 "use client";
 
-import { Image, Zap, Clock, TrendingUp } from "lucide-react";
-import { motion } from "framer-motion";
-import Masonry from "react-responsive-masonry";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import UsageChart from "@/components/dashboard/UsageChart";
-import ImageCard from "@/components/dashboard/ImageCard";
-import QuickActionsPanel from "@/components/dashboard/QuickActionsPanel";
-import SubscriptionCard from "@/components/dashboard/SubscriptionCard";
-import PromptInput from "@/components/dashboard/PromptInput";
+import { ImageGallery } from '@/components/dashboard/ImageGallery';
+import PromptInput from '@/components/dashboard/PromptInput';
+import { GeneratedImage } from '@/types';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { createImage, getUserImages } from '@/lib/actions/images.actions';
+import { useUser } from '@clerk/nextjs';
+import ImageGridLoader from '@/components/dashboard/ImageGridLoader';
+import { uploadImageToStorage } from '@/lib/supabase/client';
 
-const mockImages = [
-  {
-    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80",
-    prompt: "A futuristic cyberpunk city at night with neon lights reflecting on wet streets",
-  },
-  {
-    imageUrl: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=800&q=80",
-    prompt: "Fantasy portrait of an ethereal elf warrior in enchanted forest",
-  },
-  {
-    imageUrl: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=800&q=80",
-    prompt: "Abstract cosmic nebula with swirling galaxies and star clusters",
-  },
-  {
-    imageUrl: "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=800&q=80",
-    prompt: "Minimalist geometric shapes floating in pastel gradient space",
-  },
-  {
-    imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-    prompt: "Majestic mountain landscape with aurora borealis dancing in the sky",
-  },
-  {
-    imageUrl: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&q=80",
-    prompt: "Steampunk mechanical dragon with intricate brass gears and copper wings",
-  },
-];
+const DashboardPage = () => {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [images, setImages] = useState<GeneratedImage[]>([]);
+  const { user } = useUser();
+  const [isFetching, setIsFetching] = useState(true);
 
-export default function App() {
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchImages = async () => {
+      try {
+        const res = await getUserImages(user.id);
+        console.log("Fetched images:", res);
+
+        const formatted = res.map((img) => ({
+          id: img.id,
+          url: img.url,
+          prompt: img.prompt,
+          timestamp: new Date(img.createdAt),
+          liked: img.liked ?? false,
+        }));
+
+        setImages(formatted);
+      } catch (error) {
+        console.error("FETCH IMAGES ERROR:", error);
+        toast.error("Failed to fetch images");
+      }finally{
+        setIsFetching(false);
+      }
+    };
+
+    fetchImages();
+  }, [user]);
+
+  const handleGenerate = async (prompt: string) => {
+    if (!prompt.trim()) {
+      toast.error("Please enter a prompt");
+      return;
+    }
+
+    if(!user) {
+      toast.error("Please sign in to generate images");
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("API ERROR:", text);
+        throw new Error("Generation failed");
+      }
+
+      const blob = await res.blob();
+
+      const file = new File([blob], `image-${Date.now()}.png`, {
+        type: "image/png",
+      });
+
+      const uploadedUrl = await uploadImageToStorage(file);
+
+      await createImage({
+        url: uploadedUrl,
+        prompt,
+        userId: user.id,
+      });
+
+      setImages((prev) => [ { id: Date.now().toString(), url: uploadedUrl, prompt, timestamp: new Date(), liked: false, }, ...prev, ]);
+    } catch (error) {
+      console.error(error);
+      toast.error("Generation failed");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  const handleLike = (id: string) => {
+    setImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...img, liked: !img.liked } : img))
+    );
+  };
+
+  const handleDownload = (id: string) => {
+    const image = images.find((img) => img.id === id);
+    if (image) {
+      toast.success('Download started!');
+    }
+  };
+
+  const handleCopyPrompt = (prompt: string) => {
+    navigator.clipboard.writeText(prompt);
+    toast.success('Prompt copied to clipboard!');
+  };
+
   return (
-    <div className="flex h-screen bg-linear-to-br from-black via-purple-950 to-blue-950 overflow-hidden">
-      <DashboardSidebar />
-
-      <div className="flex-1 overflow-y-auto pb-48">
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <h1 className="text-4xl font-bold bg-linear-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent mb-2">
-              Welcome back, John
-            </h1>
-            <p className="text-gray-400">Let's create something amazing today</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <AnalyticsCard
-              title="Total Images"
-              value="1,247"
-              icon={Image}
-              trend="+12% from last month"
-              color="purple"
-            />
-            <AnalyticsCard
-              title="This Week"
-              value="89"
-              icon={Zap}
-              trend="+23% from last week"
-              color="blue"
-            />
-            <AnalyticsCard
-              title="Avg. Generation Time"
-              value="4.2s"
-              icon={Clock}
-              trend="-15% faster"
-              color="pink"
-            />
-            <AnalyticsCard
-              title="Success Rate"
-              value="98.5%"
-              icon={TrendingUp}
-              trend="+2.3% improved"
-              color="cyan"
-            />
-          </div>
-
-          <UsageChart />
-
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-6">Recent Generations</h2>
-            <Masonry columnsCount={3} gutter="1.5rem">
-              {mockImages.map((image, index) => (
-                <ImageCard
-                  key={index}
-                  imageUrl={image.imageUrl}
-                  prompt={image.prompt}
-                  liked={index % 3 === 0}
-                />
-              ))}
-            </Masonry>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-6">Quick Actions</h2>
-            <QuickActionsPanel />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <SubscriptionCard />
-            <motion.div
-              className="p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-purple-500/20"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
-              <div className="space-y-3">
-                {[
-                  { action: "Generated", prompt: "Cyberpunk city", time: "2 min ago" },
-                  { action: "Liked", prompt: "Fantasy portrait", time: "15 min ago" },
-                  { action: "Downloaded", prompt: "Abstract art", time: "1 hour ago" },
-                  { action: "Generated", prompt: "Space nebula", time: "2 hours ago" },
-                ].map((activity, index) => (
-                  <motion.div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div>
-                      <p className="text-sm text-white">
-                        <span className="text-purple-400">{activity.action}</span> "{activity.prompt}"
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
+    <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+      <header className="p-6 border-b border-white/10 bg-black/20 backdrop-blur-sm">
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-1">Generate Images</h2>
+          <p className="text-white/60">Create stunning AI-generated artwork with advanced models</p>
         </div>
+      </header>
+
+      <div className="flex-1 overflow-hidden p-6">
+        {
+          isFetching ? (
+            <div className="flex flex-col gap-6">
+              <ImageGridLoader />
+            </div>
+          ) : images.length === 0 ? (
+            <div className="text-center max-w-full h-full flex flex-col items-center justify-center">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-linear-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 blur-3xl rounded-full" />
+
+                <div className="relative w-20 h-20 mx-auto rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl flex items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-10 h-10 text-white/70"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9.75 17L15 12m0 0l-5.25-5M15 12H3"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <h3 className="text-xl font-semibold text-white mb-2">
+                No images generated yet
+              </h3>
+
+              <p className="text-white/60 mb-6">
+                Start creating stunning AI-generated artwork by typing a prompt below.
+              </p>
+
+              <div className="grid grid-cols-1 gap-2 mb-6">
+                <div className="text-xs text-white/50 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                  ✨ Try: “futuristic forest with glowing trees”
+                </div>
+                <div className="text-xs text-white/50 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                  🌌 Try: “cyberpunk city at night, cinematic lighting”
+                </div>
+              </div>
+
+              <p className="text-white/30 text-xs">
+                Use the prompt bar below to generate your first image
+              </p>
+            </div>
+          ) : (
+            <ImageGallery
+              images={images}
+              onLike={handleLike}
+              onDownload={handleDownload}
+              onCopyPrompt={handleCopyPrompt}
+            />
+          )
+        }
       </div>
 
-      <PromptInput />
-    </div>
+      <PromptInput 
+        onGenerate={handleGenerate} 
+        isGenerating={isGenerating} 
+      />
+    </main>
   );
 }
+
+export default DashboardPage;
